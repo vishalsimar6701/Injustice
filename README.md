@@ -1,17 +1,33 @@
-# injustice
+# Injustice: Accountability Platform
 
-A new Flutter project.
+A decentralized, federated, and transparent platform for reporting and documenting systemic injustice.
 
-## Getting Started
+## ⚖️ Features
 
-This project is a starting point for a Flutter application.
+- **Decentralized (Nostr Protocol):** Built on the Nostr protocol, ensuring no central authority can shut down the flow of information.
+- **Federated Communities:** Users can connect to local "Relays" (servers) managed by different communities or NGOs, allowing for localized moderation and governance.
+- **Mandatory Evidence:** To prevent misinformation, every report must be backed by verifiable evidence (photo, video, or external link).
+- **Proof-of-Work (PoW):** Every report requires local device "mining" (PoW) to prevent automated spam and bot-driven fake news.
+- **Community Verification:** Reports can be "verified" by other users, with special gold badges for trusted NGOs and Journalists.
+- **Legal Compliance:** Built with Indian IT Rules 2021 in mind, featuring a Grievance Redressal mechanism and local blocking tools.
 
-A few resources to get you started if this is your first Flutter project:
+## 🚀 Getting Started
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+1. **Download the App:** Check the [Releases](https://github.com/vishalsimar6701/Injustice/releases) page for the latest APK.
+2. **Enter Platform:** Review the legal disclaimer and intermediary notices.
+3. **Manage Communities:** Add local relays (e.g., `wss://mumbai-legal.io`) to join specific regional feeds.
+4. **Report Injustice:** Provide a description, location, and mandatory evidence to broadcast a report.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 🛠 Technical Details
+
+- **Framework:** Flutter (Dart)
+- **Protocol:** Nostr
+- **Storage:** Local SharedPreferences for user preferences; data is hosted on independent relays.
+- **Security:** Cryptographic key-pair identity; local Proof-of-Work calculation for spam prevention.
+
+## 🛡 Legal Disclaimer
+
+*Injustice* is a decentralized protocol browser. It does not host or control the content displayed. Content is hosted on independent relays. For legal grievances, users should contact the specific relay providers or the designated Grievance Officer listed in the app settings.
+
+---
+*Built for accountability and transparency.*
