@@ -32,6 +32,9 @@ jobs:
       - name: Create local.properties
         run: echo "flutter.sdk=$(flutter sdk-path)" > android/local.properties
         
+      - name: Fix Gradle permissions
+        run: chmod +x android/gradlew
+        
       - name: Build APK
         run: flutter build apk --release --no-tree-shake-icons
       
