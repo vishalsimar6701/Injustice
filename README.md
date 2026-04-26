@@ -26,7 +26,7 @@ A decentralized, federated, and transparent platform for reporting and documenti
 
 ## 🛡 Legal Disclaimer
 
-*Injustice* is a decentralized protocol browser. It does not host or control the content displayed. Content is hosted on independent relays. For legal grievances, users should contact the specific relay providers or the designated Grievance Officer listed in the app settings.
+*Injustice* is a decentralized protocol browser. It does not host or control the content displayed. Content is hosted on independent relays.
 
 ---
 *Built for accountability and transparency.*
