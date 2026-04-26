@@ -9,7 +9,6 @@ A decentralized, federated, and transparent platform for reporting and documenti
 - **Mandatory Evidence:** To prevent misinformation, every report must be backed by verifiable evidence (photo, video, or external link).
 - **Proof-of-Work (PoW):** Every report requires local device "mining" (PoW) to prevent automated spam and bot-driven fake news.
 - **Community Verification:** Reports can be "verified" by other users, with special gold badges for trusted NGOs and Journalists.
-- **Legal Compliance:** Built with Indian IT Rules 2021 in mind, featuring a Grievance Redressal mechanism and local blocking tools.
 
 ## 🚀 Getting Started
 
