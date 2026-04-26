@@ -45,6 +45,7 @@ dependencies:
   dart_nostr: ^9.2.5
   shared_preferences: ^2.5.5
   image_picker: ^1.2.1
+  permission_handler: ^11.4.0
 
 dev_dependencies:
   flutter_test:

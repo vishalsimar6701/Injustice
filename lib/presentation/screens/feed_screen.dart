@@ -10,6 +10,7 @@ import '../../data/repositories/data_service.dart';
 import '../../core/location_data.dart';
 import '../theme/app_theme.dart';
 import 'package:intl/intl.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 enum SortOption { newest, category, location }
 
@@ -30,6 +31,7 @@ class _FeedScreenState extends State<FeedScreen> {
   // Filtering state
   String? _filterState;
   String? _filterDistrict;
+  String? _userPubKey;
   bool _isConnected = true;
   Timer? _connectionTimer;
 
@@ -39,6 +41,14 @@ class _FeedScreenState extends State<FeedScreen> {
     _loadFilters();
     _initNostr();
     _startConnectionCheck();
+    _loadUserPubKey();
+  }
+
+  Future<void> _loadUserPubKey() async {
+    final pubKey = await DataService.getUserPubKey();
+    if (mounted) {
+      setState(() => _userPubKey = pubKey);
+    }
   }
 
   void _startConnectionCheck() {
@@ -320,45 +330,76 @@ class _FeedScreenState extends State<FeedScreen> {
                       tooltip: 'Share Report',
                     ),
                     const Spacer(),
-                    TextButton(
-                      onPressed: () async {
-                        final confirm = await showDialog<bool>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Block Author?'),
-                            content: const Text('You will no longer see any reports from this author.'),
-                            actions: [
-                              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL')),
-                              TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('BLOCK', style: TextStyle(color: AppTheme.errorRed))),
-                            ],
-                          ),
-                        );
+                    if (post.authorPubKey == _userPubKey)
+                      TextButton.icon(
+                        onPressed: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Delete Report?'),
+                              content: const Text('This will request all relays to delete this report. This action cannot be undone.'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL')),
+                                TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('DELETE', style: TextStyle(color: AppTheme.errorRed))),
+                              ],
+                            ),
+                          );
 
-                        if (confirm == true) {
-                          await DataService.blockAuthor(post.authorPubKey);
-                          setState(() {
-                            _posts.removeWhere((p) => p.authorPubKey == post.authorPubKey);
-                          });
+                          if (confirm == true) {
+                            await DataService.deletePost(post.id);
+                            setState(() {
+                              _posts.removeWhere((p) => p.id == post.id);
+                            });
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Deletion request sent.'))
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.delete_forever_outlined, size: 16, color: AppTheme.errorRed),
+                        label: const Text('DELETE', style: TextStyle(color: AppTheme.errorRed, fontSize: 11, fontWeight: FontWeight.bold)),
+                      )
+                    else ...[
+                      TextButton(
+                        onPressed: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Block Author?'),
+                              content: const Text('You will no longer see any reports from this author.'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL')),
+                                TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('BLOCK', style: TextStyle(color: AppTheme.errorRed))),
+                              ],
+                            ),
+                          );
+
+                          if (confirm == true) {
+                            await DataService.blockAuthor(post.authorPubKey);
+                            setState(() {
+                              _posts.removeWhere((p) => p.authorPubKey == post.authorPubKey);
+                            });
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Author blocked.'))
+                            );
+                          }
+                        },
+                        child: const Text('BLOCK', style: TextStyle(color: AppTheme.errorRed, fontSize: 11, fontWeight: FontWeight.bold)),
+                      ),
+                      TextButton.icon(
+                        onPressed: () async {
+                          await DataService.hidePost(post.id);
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Author blocked.'))
+                            const SnackBar(content: Text('Post reported and hidden from your feed.'))
                           );
-                        }
-                      },
-                      child: const Text('BLOCK', style: TextStyle(color: AppTheme.errorRed, fontSize: 11, fontWeight: FontWeight.bold)),
-                    ),
-                    TextButton.icon(
-                      onPressed: () async {
-                        await DataService.hidePost(post.id);
-                        if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Post reported and hidden from your feed.'))
-                        );
-                        setState(() { _posts.removeWhere((p) => p.id == post.id); });
-                      },
-                      icon: const Icon(Icons.flag_outlined, size: 16, color: AppTheme.errorRed),
-                      label: const Text('REPORT', style: TextStyle(color: AppTheme.errorRed, fontSize: 11, fontWeight: FontWeight.bold)),
-                    ),
+                          setState(() { _posts.removeWhere((p) => p.id == post.id); });
+                        },
+                        icon: const Icon(Icons.flag_outlined, size: 16, color: AppTheme.errorRed),
+                        label: const Text('REPORT', style: TextStyle(color: AppTheme.errorRed, fontSize: 11, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
                   ],
                 ),
               ],
@@ -491,6 +532,7 @@ class _FeedScreenState extends State<FeedScreen> {
     String category = 'General';
     XFile? pickedFile;
     bool isUploading = false;
+    String statusMessage = '';
 
     showModalBottomSheet(
       context: context,
@@ -539,12 +581,17 @@ class _FeedScreenState extends State<FeedScreen> {
                     const SizedBox(width: 8),
                     IconButton.filled(
                       onPressed: isUploading ? null : () async {
-                        final XFile? file = await _picker.pickImage(source: ImageSource.gallery);
-                        if (file != null) {
-                          setModalState(() {
-                            pickedFile = file;
-                            evidenceController.text = file.name;
-                          });
+                        final status = await Permission.photos.request();
+                        if (status.isGranted || status.isLimited) {
+                          final XFile? file = await _picker.pickImage(source: ImageSource.gallery);
+                          if (file != null) {
+                            setModalState(() {
+                              pickedFile = file;
+                              evidenceController.text = file.name;
+                            });
+                          }
+                        } else if (status.isPermanentlyDenied) {
+                          openAppSettings();
                         }
                       },
                       icon: const Icon(Icons.photo_library_rounded),
@@ -552,12 +599,17 @@ class _FeedScreenState extends State<FeedScreen> {
                     ),
                     IconButton.filled(
                       onPressed: isUploading ? null : () async {
-                        final XFile? file = await _picker.pickImage(source: ImageSource.camera);
-                        if (file != null) {
-                          setModalState(() {
-                            pickedFile = file;
-                            evidenceController.text = file.name;
-                          });
+                        final status = await Permission.camera.request();
+                        if (status.isGranted) {
+                          final XFile? file = await _picker.pickImage(source: ImageSource.camera);
+                          if (file != null) {
+                            setModalState(() {
+                              pickedFile = file;
+                              evidenceController.text = file.name;
+                            });
+                          }
+                        } else if (status.isPermanentlyDenied) {
+                          openAppSettings();
                         }
                       },
                       icon: const Icon(Icons.camera_alt_rounded),
@@ -647,14 +699,18 @@ class _FeedScreenState extends State<FeedScreen> {
                 ElevatedButton(
                   onPressed: (contentController.text.isNotEmpty && evidenceController.text.isNotEmpty && selectedState != null && selectedDistrict != null && cityController.text.isNotEmpty && !isUploading) 
                     ? () async {
-                        setModalState(() => isUploading = true);
+                        setModalState(() {
+                          isUploading = true;
+                          statusMessage = 'Uploading evidence...';
+                        });
                         try {
                           String finalEvidenceUrl = evidenceController.text;
                           
                           if (pickedFile != null) {
-                            // Upload the file
                             finalEvidenceUrl = await DataService.uploadFile(File(pickedFile!.path));
                           }
+                          
+                          setModalState(() => statusMessage = 'Securing report (Mining PoW)...');
                           
                           await DataService.publishPost(
                             content: contentController.text,
@@ -677,7 +733,14 @@ class _FeedScreenState extends State<FeedScreen> {
                       } 
                     : null,
                   child: isUploading 
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.goldAccent))
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.goldAccent)),
+                          const SizedBox(width: 12),
+                          Text(statusMessage, style: const TextStyle(fontSize: 12)),
+                        ],
+                      )
                     : const Text('BROADCAST REPORT'),
                 ),
                 const SizedBox(height: 20),

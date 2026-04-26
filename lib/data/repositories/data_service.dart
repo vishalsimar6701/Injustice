@@ -11,7 +11,8 @@ class DataService {
   static final Nostr _nostr = Nostr.instance;
   static const int _postKind = 1;
   static const int _reactionKind = 7;
-  static const int _powDifficulty = 16; 
+  static const int _deletionKind = 5;
+  static const int _powDifficulty = 8; 
 
   // List of public keys for trusted NGOs, Journalists, etc.
   static const List<String> _trustedPubKeys = [
@@ -66,8 +67,10 @@ class DataService {
 
   static bool get isAnyRelayConnected {
     try {
+      // In dart_nostr 9.2.5, we check the relaysWebSocketsRegistry
       return _nostr.services.relays.relaysWebSocketsRegistry.isNotEmpty;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Error checking relay connection: $e');
       return false;
     }
   }
@@ -103,6 +106,28 @@ class DataService {
       await prefs.setString('private_key', key);
     }
     return key;
+  }
+
+  static Future<String> getUserPubKey() async {
+    final privKey = await _getOrGeneratePrivateKey();
+    return _nostr.services.keys.derivePublicKey(privateKey: privKey);
+  }
+
+  static Future<void> deletePost(String postId) async {
+    final privateKey = await _getOrGeneratePrivateKey();
+    
+    final event = NostrEvent.fromPartialData(
+      kind: _deletionKind,
+      content: 'Requesting deletion of this report.',
+      tags: [
+        ['e', postId],
+      ],
+      keyPairs: NostrKeyPairs(private: privateKey),
+    );
+    
+    await _nostr.services.relays.sendEventToRelays(event);
+    // Also hide it locally immediately
+    await hidePost(postId);
   }
 
   static Future<void> hidePost(String postId) async {

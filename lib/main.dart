@@ -6,8 +6,11 @@ import 'presentation/screens/feed_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Initialize the decentralized network connection
-  await DataService.init();
+  // Initialize the decentralized network connection in the background
+  // to prevent blocking the UI thread on startup.
+  DataService.init().catchError((e) {
+    debugPrint('Error initializing Nostr: $e');
+  });
   runApp(const InjusticeApp());
 }
 
